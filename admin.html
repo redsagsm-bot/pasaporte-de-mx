@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración - Citas Pasaportes</title>
+  <style>
+    :root { --primary: #6b1a3a; --secondary: #9b2c5a; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f6f8; color: #222; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    header { background: var(--primary); color: white; padding: 1rem 0; margin-bottom: 2rem; }
+    header .container { display: flex; justify-content: space-between; align-items: center; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.5rem; }
+    h2 { color: var(--primary); margin-bottom: 1rem; font-size: 1.3rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; margin-bottom: 0.3rem; font-weight: 600; font-size: 0.9rem; }
+    input, select, textarea { width: 100%; padding: 0.65rem; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; }
+    button { background: var(--primary); color: white; border: none; padding: 0.7rem 1.4rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    button.secondary { background: #6c757d; }
+    button.danger { background: #dc3545; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab { padding: 0.6rem 1.2rem; background: #e9ecef; border-radius: 6px; cursor: pointer; font-weight: 500; }
+    .tab.active { background: var(--primary); color: white; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f8f9fa; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat { background: white; padding: 1rem; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .stat strong { display: block; font-size: 1.6rem; color: var(--primary); }
+    #login-box { max-width: 400px; margin: 4rem auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1 style="font-size:1.3rem;">Panel de Administración</h1>
+      <a href="index.html" style="color:white; text-decoration:none; font-size:0.9rem;">← Volver a la página</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Login -->
+    <div class="card" id="login-box">
+      <h2>Acceso al Panel</h2>
+      <div class="form-group">
+        <label>Usuario</label>
+        <input type="text" id="user" placeholder="Usuario">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="pass" placeholder="Contraseña">
+      </div>
+      <button onclick="login()">Entrar</button>
+      <p id="login-error" style="color:#dc3545; margin-top:0.8rem; display:none;">Usuario o contraseña incorrectos</p>
+    </div>
+
+    <!-- Panel principal -->
+    <div id="panel" style="display:none;">
+      <div class="stats" id="stats"></div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="showTab('pagos')">Datos de Pago</div>
+        <div class="tab" onclick="showTab('citas')">Citas Guardadas</div>
+        <div class="tab" onclick="showTab('config')">Configuración</div>
+      </div>
+
+      <!-- Tab Pagos -->
+      <div id="tab-pagos" class="tab-content active">
+        <div class="card">
+          <h2>Configuración de Pago</h2>
+          <div class="form-group">
+            <label>Monto a pagar</label>
+            <input type="text" id="monto" placeholder="$2,440.00 MXN">
+          </div>
+          <div class="form-group">
+            <label>Concepto</label>
+            <input type="text" id="concepto" placeholder="Derechos de pasaporte">
+          </div>
+          <div class="form-group">
+            <label>CLABE interbancaria</label>
+            <input type="text" id="clabe" placeholder="012180001234567890">
+          </div>
+          <div class="form-group">
+            <label>Banco</label>
+            <input type="text" id="banco" placeholder="BBVA">
+          </div>
+          <div class="form-group">
+            <label>Nota para el cliente</label>
+            <textarea id="nota" rows="2" placeholder="Conserva tu comprobante de pago..."></textarea>
+          </div>
+          <button onclick="guardarPago()">Guardar configuración de pago</button>
+          <span id="msg-pago" style="margin-left:1rem; color:#28a745; display:none;">Guardado</span>
+        </div>
+      </div>
+
+      <!-- Tab Citas -->
+      <div id="tab-citas" class="tab-content">
+        <div class="card">
+          <h2>Citas registradas</h2>
+          <div style="margin-bottom:1rem;">
+            <button class="secondary" onclick="exportarCSV()">Exportar a CSV</button>
+            <button class="danger" onclick="borrarCitas()" style="margin-left:0.5rem;">Borrar todas</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table id="tabla-citas">
+              <thead>
+                <tr>
+                  <th>Folio</th>
+                  <th>Nombre</th>
+                  <th>CURP</th>
+                  <th>Teléfono</th>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>Oficina</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <p id="sin-citas" style="color:#888; margin-top:1rem;">No hay citas guardadas.</p>
+        </div>
+      </div>
+
+      <!-- Tab Configuración -->
+      <div id="tab-config" class="tab-content">
+        <div class="card">
+          <h2>Configuración general</h2>
+          <div class="form-group">
+            <label>Título de la página principal</label>
+            <input type="text" id="titulo-pagina" value="Pasaporte">
+          </div>
+          <div class="form-group">
+            <label>Mensaje de bienvenida</label>
+            <textarea id="mensaje-bienvenida" rows="2">Obtén tu pasaporte desde cualquier parte del mundo. Conoce los requisitos y agenda tu cita en línea.</textarea>
+          </div>
+          <button onclick="guardarGeneral()">Guardar textos</button>
+          <span id="msg-general" style="margin-left:1rem; color:#28a745; display:none;">Guardado</span>
+        </div>
+        <div class="card">
+          <h2>Seguridad</h2>
+          <p style="color:#666; font-size:0.9rem; margin-bottom:1rem;">Las credenciales actuales están definidas en el código. Para mayor seguridad se recomienda cambiarlas editando el archivo.</p>
+          <p><strong>Usuario actual:</strong> adminSRE</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const USER = 'adminSRE';
+    const PASS = 'Pasaporte2026!';
+
+    function login() {
+      const u = document.getElementById('user').value.trim();
+      const p = document.getElementById('pass').value;
+      if (u === USER && p === PASS) {
+        document.getElementById('login-box').style.display = 'none';
+        document.getElementById('panel').style.display = 'block';
+        cargarDatos();
+        cargarCitas();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    }
+
+    function showTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelector(`.tab[onclick="showTab('${name}')"]`).classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
+    }
+
+    function cargarDatos() {
+      const config = JSON.parse(localStorage.getItem('pagoConfig')) || {};
+      document.getElementById('monto').value = config.monto || '$2,440.00 MXN';
+      document.getElementById('concepto').value = config.concepto || 'Derechos de pasaporte';
+      document.getElementById('clabe').value = config.clabe || '012180001234567890';
+      document.getElementById('banco').value = config.banco || 'BBVA';
+      document.getElementById('nota').value = config.nota || 'Conserva tu comprobante de pago.';
+
+      const general = JSON.parse(localStorage.getItem('configGeneral')) || {};
+      if (general.titulo) document.getElementById('titulo-pagina').value = general.titulo;
+      if (general.mensaje) document.getElementById('mensaje-bienvenida').value = general.mensaje;
+    }
+
+    function guardarPago() {
+      const config = {
+        monto: document.getElementById('monto').value,
+        concepto: document.getElementById('concepto').value,
+        clabe: document.getElementById('clabe').value,
+        banco: document.getElementById('banco').value,
+        nota: document.getElementById('nota').value
+      };
+      localStorage.setItem('pagoConfig', JSON.stringify(config));
+      const msg = document.getElementById('msg-pago');
+      msg.style.display = 'inline';
+      setTimeout(() => msg.style.display = 'none', 2000);
+    }
+
+    function guardarGeneral() {
+      const general = {
+        titulo: document.getElementById('titulo-pagina').value,
+        mensaje: document.getElementById('mensaje-bienvenida').value
+      };
+      localStorage.setItem('configGeneral', JSON.stringify(general));
+      const msg = document.getElementById('msg-general');
+      msg.style.display = 'inline';
+      setTimeout(() => msg.style.display = 'none', 2000);
+    }
+
+    function cargarCitas() {
+      const citas = JSON.parse(localStorage.getItem('citasGuardadas')) || [];
+      const tbody = document.querySelector('#tabla-citas tbody');
+      const sin = document.getElementById('sin-citas');
+      tbody.innerHTML = '';
+
+      // Stats
+      const stats = document.getElementById('stats');
+      stats.innerHTML = `
+        <div class="stat"><strong>${citas.length}</strong> Citas totales</div>
+        <div class="stat"><strong>${citas.filter(c => c.fecha === new Date().toISOString().split('T')[0]).length}</strong> Hoy</div>
+      `;
+
+      if (citas.length === 0) {
+        sin.style.display = 'block';
+        return;
+      }
+      sin.style.display = 'none';
+      citas.slice().reverse().forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${c.folio || '-'}</td>
+          <td>${c.nombre || '-'}</td>
+          <td>${c.curp || '-'}</td>
+          <td>${c.telefono || '-'}</td>
+          <td>${c.fecha || '-'}</td>
+          <td>${c.hora || '-'}</td>
+          <td>${c.oficina || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function exportarCSV() {
+      const citas = JSON.parse(localStorage.getItem('citasGuardadas')) || [];
+      if (!citas.length) return alert('No hay citas para exportar');
+      let csv = 'Folio,Nombre,CURP,Email,Telefono,Fecha,Hora,Oficina,Tramite\n';
+      citas.forEach(c => {
+        csv += `"${c.folio||''}","${c.nombre||''}","${c.curp||''}","${c.email||''}","${c.telefono||''}","${c.fecha||''}","${c.hora||''}","${c.oficina||''}","${c.tramite||''}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'citas-pasaportes.csv';
+      a.click();
+    }
+
+    function borrarCitas() {
+      if (confirm('¿Borrar todas las citas guardadas? Esta acción no se puede deshacer.')) {
+        localStorage.removeItem('citasGuardadas');
+        cargarCitas();
+      }
+    }
+  </script>
+</body>
+</html>
